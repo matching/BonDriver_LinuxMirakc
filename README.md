@@ -1,5 +1,5 @@
 # BonDriver_LinuxMirakc
-Linux の EDCB で mirac に接続するための BonDriver です。Mirakurunでは接続テストしていないので動くかわかりません。
+Linux の EDCB で mirakc に接続するための BonDriver です。Mirakurunでは接続テストしていないので動くかわかりません。
 
 
 以下をベースにLinuxで動くように移植しました。作者さまに感謝いたします。
