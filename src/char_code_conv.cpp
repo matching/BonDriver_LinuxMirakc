@@ -27,7 +27,6 @@ CharCodeConv::~CharCodeConv()
 bool CharCodeConv::Utf8ToUtf16(const char *src, WCHAR *dst)
 {
 	char *s = (char *)src;
-	WCHAR *d = dst;
 	size_t s_len = ::strlen( src );
 
 	size_t d_len = s_len * sizeof(WCHAR);

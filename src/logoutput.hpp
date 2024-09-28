@@ -1,6 +1,6 @@
 /*
  * Copyright 2024 matching
- /
+ */
 
 #ifndef LOGOUTPUT_HPP
 #define LOGOUTPUT_HPP

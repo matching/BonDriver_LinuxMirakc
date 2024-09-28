@@ -15,7 +15,6 @@ static int Init()
 
 	int ret;
 	Dl_info info;
-	char *p;
 	char ini_filename[ MAX_PATH ];
 
 	ret = dladdr( (void *)Init, &info );
@@ -97,7 +96,6 @@ extern "C" IBonDriver * CreateBonDriver()
 
 // 静的メンバ初期化
 CBonTuner * CBonTuner::m_pThis = NULL;
-//HINSTANCE CBonTuner::m_hModule = NULL;
 
 CBonTuner::CBonTuner()
 {
@@ -144,12 +142,12 @@ const BOOL CBonTuner::OpenTuner()
 		}
 		
 		if( conn == NULL ) {
-			ERROR_OUTPUT( "%s: Server Type Invalid (%s)", g_ServerType );
+			ERROR_OUTPUT( "%s: Server Type Invalid (%s)", g_TunerName, g_ServerType );
 			break;
 		}
 		
 		if( conn->connect() < 0 ) {
-			ERROR_OUTPUT( "%s: Connect error (%s)(%d)(%s)", g_ServerType, g_ServerHost, g_ServerPort, g_ServerSockpath );
+			ERROR_OUTPUT( "%s: Connect error (%s)(%s)(%d)(%s)", g_TunerName, g_ServerType, g_ServerHost, g_ServerPort, g_ServerSockpath );
 			break;
 		}
 
@@ -386,7 +384,7 @@ const BOOL CBonTuner::SetChannel(const DWORD dwSpace, const DWORD dwChannel)
 	char url[len];
 	if (g_Service_Split == 1) {
 		const int64_t id = (int64_t)channel_obj["id"].get<double>();
-		sprintf(url, "/api/services/%lld/stream?decode=%d", id, g_DecodeB25);
+		sprintf(url, "/api/services/%lld/stream?decode=%d", (long long int)id, g_DecodeB25);
 
 	}
 	else {
@@ -510,10 +508,7 @@ BOOL CBonTuner::GetApiChannels(picojson::value *channel_json, int service_split)
 	}
 
 	char *data = NULL;
-	char *prev = NULL;
-	DWORD dwSize;
 	int dwTotalSize = 0;
-	BOOL ret;
 
 	if (!SendRequest(url, &data, &dwTotalSize)) {
 		return FALSE;
@@ -536,7 +531,6 @@ BOOL CBonTuner::GetApiChannels(picojson::value *channel_json, int service_split)
 BOOL CBonTuner::SendRequest(char *url, char **body, int *bodysize)
 {
 	BOOL ret = FALSE;
-	char szDebugOut[64];
 
 	conn->shutdown();
 	
@@ -577,7 +571,6 @@ void *CBonTuner::RecvThread( void *pParam )
 	#define BUF_SIZE (188 * 256)
 	char *buf = new char[ BUF_SIZE ];
 
-	int outsize;
 	int ret;
 	
 	for(;;) {
