@@ -1,0 +1,18 @@
+[GLOBAL]
+SERVER_HOST="127.0.0.1"
+SERVER_PORT=40772
+
+SERVER_SOCKPATH="/var/run/mirakc.sock"
+
+; "http" or "unix"
+SERVER_TYPE="http"
+
+; B25(1=enable)
+DECODE_B25=1
+
+; Priority(0=Low Priority)
+PRIORITY=10
+
+; Service Split(1=enable)
+SERVICE_SPLIT=0
+
