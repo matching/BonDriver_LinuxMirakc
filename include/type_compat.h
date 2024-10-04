@@ -1,4 +1,5 @@
 // type_compat.h
+// originaled by nns779
 
 #pragma once
 

@@ -29,13 +29,13 @@ static int Init()
 	Config::Section sec_global;
 
 	if( config.Load( ini_filename ) == false ) {
-		DEBUG_OUTPUT("ini file(%s) not found. load default value", ini_filename);
+		ERROR_OUTPUT("ini file(%s) not found. load default value", ini_filename);
 		Init_set_default_value();
 		return 0;
 	}
 
 	if( config.Exists( "GLOBAL" ) == false ) {
-		DEBUG_OUTPUT1("in ini file, GLOBAL section not found. load default value");
+		ERROR_OUTPUT1("in ini file, GLOBAL section not found. load default value");
 		Init_set_default_value();
 		return 0;
 	}
@@ -61,6 +61,8 @@ static void Init_set_default_value(void)
 	g_DecodeB25 = 0;
 	g_Priority = 1;
 	g_Service_Split = 0;
+
+	strcpy( g_ServerType, "http" );
 }
 
 
@@ -190,8 +192,10 @@ void CBonTuner::CloseTuner()
 		}
 	}
 	g_Max_Type = -1;
-
-	conn->disconnect();
+	
+	if(conn) {
+		conn->disconnect();
+	}
 }
 
 const DWORD CBonTuner::WaitTsStream(const DWORD dwTimeOut)

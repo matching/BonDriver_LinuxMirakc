@@ -24,6 +24,7 @@
  #endif
 
 #define DEBUG_OUTPUT1(MSG) DEBUG_OUTPUT("%s",MSG)
+#define ERROR_OUTPUT1(MSG) ERROR_OUTPUT("%s",MSG)
 
 
 #endif
