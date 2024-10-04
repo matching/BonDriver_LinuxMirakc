@@ -32,7 +32,13 @@ public:
 	MirakcConnectBase()
 	{
 	}
-
+	virtual ~MirakcConnectBase()
+	{
+		if(s >= 0) {
+			close(s);
+		}
+	}
+	
 	virtual int connect() = 0;
 
 	int sendGetRequest_WaitBody( char *url, char *requestHeader, char *responceHeader, int *responceCode, char *body, int *bodysize );
