@@ -25,6 +25,18 @@ static int Init()
 
 	sprintf( ini_filename, "%s.ini", info.dli_fname );
 
+	// チューナー名は .so を除いたファイル名とする（お尻は無条件に３文字削る）
+	char *p;
+	
+	p = strrchr( (char *)info.dli_fname, '/' );
+	if( p == NULL ) {
+		::memcpy( g_TunerName, info.dli_fname, strlen( info.dli_fname ) - 3);
+	}
+	else {
+		::memcpy( g_TunerName, p + 1, strlen( p + 1 ) - 3);
+	}
+	
+	// load ini file
 	Config config;
 	Config::Section sec_global;
 
@@ -133,6 +145,8 @@ const BOOL CBonTuner::OpenTuner()
 {
 	DEBUG_CALL("");
 
+	DEBUG_OUTPUT1("Start");
+
 	while (1) {
 		conn = NULL;
 		
@@ -162,10 +176,14 @@ const BOOL CBonTuner::OpenTuner()
 			break;
 		}
 
+		DEBUG_OUTPUT1("End(success)");
+
 		return TRUE;
 	}
 
 	CloseTuner();
+
+	DEBUG_OUTPUT1("End(fail)");
 
 	return FALSE;
 }
@@ -173,7 +191,8 @@ const BOOL CBonTuner::OpenTuner()
 void CBonTuner::CloseTuner()
 {
 	DEBUG_CALL("");
-	
+	DEBUG_OUTPUT1("Start");
+
 	// チャンネル初期化
 	m_dwCurSpace = 0xffffffff;
 	m_dwCurChannel = 0xffffffff;
@@ -198,35 +217,39 @@ void CBonTuner::CloseTuner()
 		delete conn;
 		conn = NULL;
 	}
+	DEBUG_OUTPUT1("End");
 }
 
 const DWORD CBonTuner::WaitTsStream(const DWORD dwTimeOut)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT("Start(%d)", dwTimeOut);
 
 	DWORD ret;
 
 	ret = m_pGrabTsData->Wait_TsStream( dwTimeOut );
 
+	DEBUG_OUTPUT("End(%d)", ret);
 	return ret;
 }
 
 const DWORD CBonTuner::GetReadyCount()
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Start");
 
 	DWORD dwCount = 0;
 	if (m_pGrabTsData) {
 		m_pGrabTsData->get_ReadyCount(&dwCount);
 	}
 
+	DEBUG_OUTPUT("End(%d)", dwCount);
 	return dwCount;
 }
 
 const BOOL CBonTuner::GetTsStream(BYTE *pDst, DWORD *pdwSize, DWORD *pdwRemain)
 {
 	DEBUG_CALL("");
-
 
 	BYTE *pSrc = NULL;
 
@@ -269,6 +292,7 @@ void CBonTuner::PurgeTsStream()
 void CBonTuner::Release()
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Called");
 
 	// インスタンス開放
 	delete this;
@@ -277,6 +301,7 @@ void CBonTuner::Release()
 LPCTSTR CBonTuner::GetTunerName(void)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Called");
 
 	// チューナ名を返す
 
@@ -289,6 +314,7 @@ LPCTSTR CBonTuner::GetTunerName(void)
 const BOOL CBonTuner::IsTunerOpening(void)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Called");
 
 	return FALSE; // todo?
 }
@@ -345,6 +371,7 @@ LPCTSTR CBonTuner::EnumChannelName(const DWORD dwSpace, const DWORD dwChannel)
 const DWORD CBonTuner::GetCurSpace(void)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Called");
 
 	// 現在のチューニング空間を返す
 	return m_dwCurSpace;
@@ -353,6 +380,7 @@ const DWORD CBonTuner::GetCurSpace(void)
 const DWORD CBonTuner::GetCurChannel(void)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT1("Called");
 
 	// 現在のチャンネルを返す
 	return m_dwCurChannel;
@@ -370,15 +398,18 @@ const BOOL CBonTuner::SetChannel(const BYTE bCh)
 const BOOL CBonTuner::SetChannel(const DWORD dwSpace, const DWORD dwChannel)
 {
 	DEBUG_CALL("");
+	DEBUG_OUTPUT("Start(sp:%d, ch:%d)", dwSpace, dwChannel);
 
 	conn->shutdown();
 
 	if ((int32_t)dwSpace > g_Max_Type) {
+		DEBUG_OUTPUT("end(failed) (sp:%d, spmax:%d)", dwSpace, g_Max_Type);
 		return FALSE;
 	}
 
 	DWORD Bon_Channel = dwChannel + g_Channel_Base[dwSpace];
 	if (!g_Channel_JSON.contains(Bon_Channel)) {
+		DEBUG_OUTPUT1("end(failed) (invalid channel)");
 		return FALSE;
 	}
 
@@ -430,6 +461,7 @@ const BOOL CBonTuner::SetChannel(const DWORD dwSpace, const DWORD dwChannel)
 		return FALSE;
 	}
 
+	DEBUG_OUTPUT1("End(succes)");
 	return TRUE;
 }
 

@@ -17,7 +17,7 @@
 
 #define TUNER_NAME "LinuxMirakc"
 
-static const char g_TunerName[] = TUNER_NAME;
+char g_TunerName[128];
 
 #define MAX_HOST_LEN 256
 static char g_ServerHost[MAX_HOST_LEN];

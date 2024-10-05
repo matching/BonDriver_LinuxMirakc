@@ -5,23 +5,33 @@
 #ifndef LOGOUTPUT_HPP
 #define LOGOUTPUT_HPP
 
-
-#define ERROR_OUTPUT(FMT, ...) {fprintf(stderr, "Bondriver_LinuxMirakc:%s:%d:" FMT "\n", __func__, __LINE__, __VA_ARGS__ ); }
-
- #if 0
- // debug
 #include <stdio.h>
+#include <time.h>
 
-#define DEBUG_CALL(msg) {fprintf(stderr, "Bondriver_LinuxMirakc:◎%s:%d called (%s)\n", __func__, __LINE__, msg ); }
+#define LOG_OUTPUT_TIME { \
+	time_t t; \
+	struct tm *d; \
+	char ddd[64]; \
+	t = time(NULL); \
+    d = localtime( &t ); \
+    strftime( ddd, sizeof(ddd), "%Y/%m/%d %H:%M:%S", d ); \
+	fprintf(stderr, "%s ", ddd ); } // todo スレッドに割り込まれる
 
-#define DEBUG_OUTPUT(FMT, ...) {fprintf(stderr, "Bondriver_LinuxMirakc:%s:%d:(DEBUG)" FMT "\n", __func__, __LINE__, __VA_ARGS__ ); }
+#define GETPID getpid()
 
- #else
+#define ERROR_OUTPUT(FMT, ...) {LOG_OUTPUT_TIME; fprintf(stderr, "%s(%d):%s:%d:" FMT "\n", g_TunerName, GETPID, __func__, __LINE__, __VA_ARGS__ ); }
 
-#define DEBUG_CALL(msg)
+#ifdef DEBUG
+#define DEBUG_OUTPUT(FMT, ...) {LOG_OUTPUT_TIME; fprintf(stderr, "%s(%d):%s:%d:(DEBUG)" FMT "\n", g_TunerName, GETPID, __func__, __LINE__, __VA_ARGS__ ); }
+#else
 #define DEBUG_OUTPUT(FMT, ...)
+#endif
 
- #endif
+#ifdef DEBUG_VERVOSE
+#define DEBUG_CALL(msg) {LOG_OUTPUT_TIME; fprintf(stderr, "%s(%d):◎%s:%d called (%s)\n", g_TunerName, GETPID, __func__, __LINE__, msg ); }
+#else
+#define DEBUG_CALL(msg)
+#endif
 
 #define DEBUG_OUTPUT1(MSG) DEBUG_OUTPUT("%s",MSG)
 #define ERROR_OUTPUT1(MSG) ERROR_OUTPUT("%s",MSG)
