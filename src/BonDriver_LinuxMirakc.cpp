@@ -371,7 +371,6 @@ LPCTSTR CBonTuner::EnumChannelName(const DWORD dwSpace, const DWORD dwChannel)
 const DWORD CBonTuner::GetCurSpace(void)
 {
 	DEBUG_CALL("");
-	DEBUG_OUTPUT1("Called");
 
 	// 現在のチューニング空間を返す
 	return m_dwCurSpace;
@@ -380,7 +379,6 @@ const DWORD CBonTuner::GetCurSpace(void)
 const DWORD CBonTuner::GetCurChannel(void)
 {
 	DEBUG_CALL("");
-	DEBUG_OUTPUT1("Called");
 
 	// 現在のチャンネルを返す
 	return m_dwCurChannel;
