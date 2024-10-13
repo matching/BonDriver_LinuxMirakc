@@ -20,5 +20,18 @@ SERVER_TYPE="unix"
 SERVER_SOCKPATH="/var/run/mirakc.sock"
 ```
 
+## ビルド方法
+
+JSONの解析のために picojson が必要です。
+include/picojson 配下に picojson のgitのツリーそのまま入れてください。
+
+clone で行う方はする方は
+> $ git clone "URL" ***--recurse-submodules***
+
+とすることで picojson 含めてcloneされます。
+
+ビルドはmakeコマンドにて実施してください。コンパイラは g++ です。
+> $ make
+
 ## License
 This software is released under the MIT License, see LICENSE.
