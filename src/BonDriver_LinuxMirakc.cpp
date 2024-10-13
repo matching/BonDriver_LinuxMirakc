@@ -569,7 +569,7 @@ BOOL CBonTuner::SendRequest(char *url, char **body, int *bodysize)
 	BOOL ret = FALSE;
 
 	conn->shutdown();
-	
+
 	while (1) {
 
 		int rc;
@@ -626,7 +626,7 @@ void *CBonTuner::RecvThread( void *pParam )
 
 	}
 	
-	delete buf;
+	delete[] buf;
 
 	return 0;
 }
