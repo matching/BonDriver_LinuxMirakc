@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 
 #include <sys/types.h>
@@ -315,6 +316,15 @@ int MirakcConnectBase::recvBody( char *body, size_t size )
 	int ret;
 	
 	ret = ::recv( s, body, size, 0 );
+
+	if( ret < 0 ) {
+		if( errno == ECONNRESET ) {
+			DEBUG_OUTPUT1("recv ECONNRESET");
+			return 0; // 正常切断として扱う
+		}
+
+		return -errno - 10000;
+	}
 
 	return ret;
 }

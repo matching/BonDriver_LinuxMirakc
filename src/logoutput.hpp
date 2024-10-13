@@ -42,5 +42,7 @@
 #define ERROR_OUTPUT1(MSG) ERROR_OUTPUT("%s",MSG)
 
 
+extern char g_TunerName[];
+
 #endif
 
