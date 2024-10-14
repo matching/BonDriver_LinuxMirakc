@@ -148,8 +148,7 @@ int MirakcConnectUnix::connect()
 void MirakcConnectBase::shutdown()
 {
 	if( s >= 0 ) {
-	
-		::shutdown(s, SHUT_RDWR);
+		::shutdown(s, SHUT_WR);
 	}
 
 }
@@ -169,8 +168,9 @@ int MirakcConnectBase::sendGetRequest_WaitBody( char *url, char *requestHeader, 
 	int state = 0;
 	char *p_startbody = body;
 
-	if( s < 0 ) {
-		connect();
+	ret = connect();
+	if( ret < 0 ) {
+		return -errno - 2000;
 	}
 
 	char send_string[ 2024 ];
@@ -182,8 +182,6 @@ int MirakcConnectBase::sendGetRequest_WaitBody( char *url, char *requestHeader, 
 		return ret - 1000;
 	}
 
-	
-	
 	for(;;) {
 		ret = ::recv( s, buf, sizeof(buf) - 1, 0 );
 		if( ret < 0 ){
@@ -240,10 +238,10 @@ int MirakcConnectBase::sendGetRequest_WaitHeader( char *url, char *requestHeader
 	int ret;
 	int state = 0;
 
-	if( s < 0 ) {
-		connect();
+	ret = connect();
+	if( ret < 0 ) {
+		return -errno - 2000;
 	}
-
 	char send_string[ 2024 ];
 	::sprintf( send_string, "GET %s HTTP/1.0\r\n%s\r\n\r\n", url, requestHeader );
 
@@ -318,11 +316,6 @@ int MirakcConnectBase::recvBody( char *body, size_t size )
 	ret = ::recv( s, body, size, 0 );
 
 	if( ret < 0 ) {
-		if( errno == ECONNRESET ) {
-			DEBUG_OUTPUT1("recv ECONNRESET");
-			return 0; // 正常切断として扱う
-		}
-
 		return -errno - 10000;
 	}
 
