@@ -18,8 +18,10 @@
 
 // TS data buffer size
 //
-#define DATA_BUF_SIZE (188 * 256)
-#define RING_BUF_SIZE (DATA_BUF_SIZE * 512) // > 24Mbps / 8bit * 5sec
+//#define DATA_BUF_SIZE (188 * 256)
+//#define RING_BUF_SIZE (DATA_BUF_SIZE * 512) // > 24Mbps / 8bit * 5sec
+#define DATA_BUF_SIZE (1024 * 1024 * 1)
+#define RING_BUF_SIZE (1024 * 1024 * 512) // > 24Mbps / 8bit * 5sec
 
 // GrabTsData class
 //
@@ -37,12 +39,14 @@ public:
 		m_nPull = 0;
 		m_pDst = (BYTE *)malloc(DATA_BUF_SIZE);
 		m_pBuf = (BYTE *)malloc(RING_BUF_SIZE);
+		m_bAbort = false;
 
 		::pthread_cond_init( &m_phOnStreamEvent, NULL );
 		::pthread_cond_init( &m_phOnStreamGetEvent, NULL );
 //		::pthread_mutex_init( &m_pRingMutex, NULL );
 
 		pthread_mutexattr_t attr;
+                ::pthread_mutexattr_init(&attr);
 		::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 		::pthread_mutex_init( &m_pRingMutex, &attr );
 		
@@ -65,6 +69,8 @@ public:
 	BOOL get_Bitrate(float *pfBitrate);
 
 	DWORD Wait_TsStream(DWORD waitMs);
+	// put_TsStreamの空き待ちを中断する(受信スレッド停止用)
+	void set_Abort(bool abort);
 
 private:
 	uint64_t GetTickCount64();
@@ -92,4 +98,7 @@ private:
 	
 	BYTE *m_pDst;
 	BYTE *m_pBuf;
+
+	// put_TsStreamの待機中断フラグ
+	bool m_bAbort;
 };

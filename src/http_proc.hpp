@@ -21,17 +21,23 @@
 
 #include "logoutput.hpp"
 
+#define HTTP_BUFFER_SIZE (1024 * 1024 * 1)
+
 class MirakcConnectBase
 {
 protected:
 	int s; // socket
 
-	char buf[ 188 * 256 + 1 ];
+	char buf[ HTTP_BUFFER_SIZE + 1 ];
 	int bufsize;
+
+	char hostHeader[ 32 ];
 
 public:
 	MirakcConnectBase()
 	{
+		s = -1;
+		bufsize = 0;
 	}
 	virtual ~MirakcConnectBase()
 	{
@@ -49,17 +55,13 @@ public:
 
 	void disconnect();
 	void shutdown();
+	void shutdownBoth();
 };
 
 class MirakcConnectHttp : public MirakcConnectBase
 {
 private:
-#if 1
 	struct sockaddr_in s_addr;
-#else
-	struct addrinfo hints;
-	struct addrinfo *addr;
-#endif
 	
 public:
 	MirakcConnectHttp( char *host, short port );
@@ -82,24 +84,11 @@ public:
 
 MirakcConnectHttp::MirakcConnectHttp( char *host, short port )
 {
-#if 1
 	s_addr.sin_addr.s_addr = inet_addr( host );
 	s_addr.sin_port        = htons( port );
 	s_addr.sin_family      = AF_INET;
-#endif
 
-#if 0
-	memset( &hints, 0, sizeof(hints) );
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_family = AF_INET;
-
-	int ret; 
-	
-	ret = getaddrinfo( host, NULL, &hints, &addr );
-	if( ret != 0 ) {
-		// error
-	}
-#endif
+	snprintf( hostHeader, sizeof(hostHeader), "Host: %s:%d", host, port );
 }
 
 
@@ -127,6 +116,9 @@ MirakcConnectUnix::MirakcConnectUnix( char *path )
 	else {
 		addr.sun_path[0] = 0;
 	}
+
+	/* Unix Domain Socket は固定設定*/
+	strcpy( hostHeader, "Host: localhost:40772" );
 }
 
 
@@ -136,7 +128,6 @@ int MirakcConnectUnix::connect()
 	
 	s = socket(AF_UNIX, SOCK_STREAM, 0);
 
-	//ret = ::connect( s, addr->ai_addr, addr->ai_addrlen );
 	ret = ::connect( s, (sockaddr *)&addr, sizeof( addr ) );
 
 	return ret;
@@ -150,7 +141,13 @@ void MirakcConnectBase::shutdown()
 	if( s >= 0 ) {
 		::shutdown(s, SHUT_WR);
 	}
+}
 
+void MirakcConnectBase::shutdownBoth()
+{
+	if( s >= 0 ) {
+		::shutdown(s, SHUT_RDWR);
+	}
 }
 
 void MirakcConnectBase::disconnect()
@@ -174,7 +171,7 @@ int MirakcConnectBase::sendGetRequest_WaitBody( char *url, char *requestHeader, 
 	}
 
 	char send_string[ 2024 ];
-	::sprintf( send_string, "GET %s HTTP/1.0\r\n%s\r\n\r\n", url, requestHeader );
+	::sprintf( send_string, "GET %s HTTP/1.0\r\n%s\r\n%s\r\n\r\n", url, hostHeader, requestHeader );
 
 	ret = ::send( s, send_string, strlen( send_string ), 0 );
 	if( ret < 0 ) {
@@ -243,7 +240,7 @@ int MirakcConnectBase::sendGetRequest_WaitHeader( char *url, char *requestHeader
 		return -errno - 2000;
 	}
 	char send_string[ 2024 ];
-	::sprintf( send_string, "GET %s HTTP/1.0\r\n%s\r\n\r\n", url, requestHeader );
+	::sprintf( send_string, "GET %s HTTP/1.0\r\n%s\r\n%s\r\n\r\n", url, hostHeader, requestHeader );
 
 	ret = ::send( s, send_string, strlen( send_string ), 0 );
 	if( ret < 0 ) {
@@ -307,6 +304,9 @@ int MirakcConnectBase::recvBody( char *body, size_t size )
 
 		::memcpy( body, buf, len );
 		bufsize -= len;
+		if( bufsize > 0 ) {
+			::memmove( buf, buf + len, bufsize );
+		}
 
 		return len;
 	}

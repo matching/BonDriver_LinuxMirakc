@@ -40,6 +40,11 @@ BOOL GrabTsData::put_TsStream(BYTE *pSrc, DWORD dwSize)
 			nPush = m_nPush;
 			nPull = m_nPull;
 
+			if( m_bAbort ) {
+				::pthread_mutex_unlock( &m_pRingMutex );
+				return FALSE;
+			}
+
 			// swSize が入るか確認
 			nTail = RING_BUF_SIZE - nPush; // size between the current position and the buffer end
 			nData = (RING_BUF_SIZE + nPush - nPull) % RING_BUF_SIZE; // size of TS data stored
@@ -66,7 +71,7 @@ BOOL GrabTsData::put_TsStream(BYTE *pSrc, DWORD dwSize)
 	else {
 		//CopyMemory(m_pBuf + m_nPush, pSrc, nTail);
 		//CopyMemory(m_pBuf, pSrc + nTail, nData - nTail);
-		::memcpy(m_pBuf + m_nPush, pSrc, nTail);
+		::memcpy(m_pBuf + nPush, pSrc, nTail);
 		::memcpy(m_pBuf, pSrc + nTail, nData - nTail);
 		nPush = nData - nTail;
 	}
@@ -148,6 +153,7 @@ BOOL GrabTsData::get_TsStream(BYTE **ppDst, DWORD *pdwSize, DWORD *pdwRemain)
 		}
 		::pthread_mutex_unlock( &m_pRingMutex );
 	}
+
 
 	// set destination variables
 	*ppDst = m_pDst;
@@ -234,7 +240,7 @@ BOOL GrabTsData::get_Bitrate(float *pfBitrate)
 DWORD GrabTsData::Wait_TsStream(DWORD waitMs)
 {
 	DWORD cnt;
-	DWORD ret;
+	DWORD ret = 0;
 	int r;
 
 	struct timespec to;
@@ -247,7 +253,7 @@ DWORD GrabTsData::Wait_TsStream(DWORD waitMs)
 		get_ReadyCount( &cnt );
 		if( cnt == 0 ){
 			r = ::pthread_cond_timedwait( &m_phOnStreamEvent, &m_pRingMutex, &to );
-			r=0;
+		//	r=0;
 			if( r == 0 ) { // success
 				ret = WAIT_OBJECT_0;
 			}
@@ -264,3 +270,16 @@ DWORD GrabTsData::Wait_TsStream(DWORD waitMs)
 	return ret;
 }
 
+// Abort (or re-arm) waiting in put_TsStream
+//
+void GrabTsData::set_Abort(bool abort)
+{
+	::pthread_mutex_lock( &m_pRingMutex );
+	{
+		m_bAbort = abort;
+		if( abort ) {
+			::pthread_cond_signal( &m_phOnStreamGetEvent );
+		}
+	}
+	::pthread_mutex_unlock( &m_pRingMutex );
+}

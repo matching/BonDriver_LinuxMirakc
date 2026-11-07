@@ -9,6 +9,7 @@
 #include <dlfcn.h>
 
 static void Init_set_default_value(void);
+static bool timedJoin(pthread_t th, int timeoutMs);
 
 static int Init()
 {
@@ -59,6 +60,8 @@ static int Init()
 	g_DecodeB25 = sec_global.Get("DECODE_B25", 0 );
 	g_Priority = sec_global.Get("PRIORITY", 1 );
 	g_Service_Split = sec_global.Get("SERVICE_SPLIT", 0 );
+	g_BufferSize = sec_global.Get("BUFFER_SIZE", 1024 * 1024 * 128 );
+	g_BufferSize = std::max( g_BufferSize, 64 * 1024); // 最低でも64KBは確保する
 
 	strncpy( g_ServerSockpath, sec_global.Get("SERVER_SOCKPATH", "").c_str(), sizeof( g_ServerSockpath ) - 1 );
 	strncpy( g_ServerType, sec_global.Get("SERVER_TYPE", "http").c_str(), sizeof( g_ServerType ) - 1 );
@@ -104,6 +107,8 @@ extern "C" IBonDriver * CreateBonDriver()
 	DEBUG_OUTPUT("DECODE_B25:%d", g_DecodeB25);
 	DEBUG_OUTPUT("PRIORITY:%d", g_Priority);
 	DEBUG_OUTPUT("SERVICE_SPLIT:%d", g_Service_Split);
+
+	DEBUG_OUTPUT("BUFFER_SIZE:%d", g_BufferSize);
 
 	return (IBonDriver *) new CBonTuner;
 }
@@ -200,7 +205,8 @@ void CBonTuner::CloseTuner()
 	// スレッド終了
 	if (m_hRecvThread) {
 		conn->shutdown();
-		pthread_join(m_hRecvThread, NULL);
+//		pthread_join(m_hRecvThread, NULL);
+		waitForRecvThreadFinish();
 		m_hRecvThread = 0;
 	}
 
@@ -432,7 +438,7 @@ const BOOL CBonTuner::SetChannel(const DWORD dwSpace, const DWORD dwChannel)
 
 	waitForRecvThreadFinish();
 
-	char szHeader[ 64 ];
+	char szHeader[ 128 ];
 	sprintf(szHeader, "Connection: close\r\nX-Mirakurun-Priority: %d", g_Priority);
 	char respHeader[ 512 ]; // todo
 	int respCode;
@@ -574,7 +580,7 @@ BOOL CBonTuner::SendRequest(char *url, char **body, int *bodysize)
 
 		int rc;
 
-		const int len = 64;
+		const int len = 128;
 		char szHeader[len];
 		sprintf(szHeader, "Connection: close\r\nX-Mirakurun-Priority: %d", g_Priority);
 
@@ -604,14 +610,24 @@ void *CBonTuner::RecvThread( void *pParam )
 	CBonTuner *pThis = (CBonTuner *)pParam;
 
 	//char buf[ 4096 ];
-	#define BUF_SIZE (188 * 256)
-	char *buf = new char[ BUF_SIZE ];
+	//#define BUF_SIZE (188 * 256)
+	//#define BUF_SIZE (1024 * 1024 * 1)
+	#define RECV_SIZE_MAX (1024 * 128)
+
+	/* バッファサイズ（リングバッファサイズ）より受信バッファを大きくできない（大きいとputで無限待ちになる）
+	 * そのため、受信バッファはリングバッファの1/10までか、128Kの小さいほうとする。(128Kあれば十分)
+	 */
+	int buf_size = std::min(g_BufferSize / 10, RECV_SIZE_MAX);
+	char *buf = new char[ buf_size ];
 
 	int ret;
 	
+	unsigned long long nSizeTotal = 0;
+	unsigned long nTotalRecv = 0;
+
 	for(;;) {
 	
-		ret = pThis->conn->recvBody( buf, BUF_SIZE );
+		ret = pThis->conn->recvBody( buf, buf_size );
 		if( ret == 0 ) { // disconnect
 			pThis->conn->disconnect();
 			break;
@@ -624,9 +640,13 @@ void *CBonTuner::RecvThread( void *pParam )
 		
 		pThis->m_pGrabTsData->put_TsStream( (BYTE *)buf, ret );
 
+		nSizeTotal += ret;
+		nTotalRecv ++;
 	}
 	
 	delete[] buf;
+
+	DEBUG_OUTPUT( "RecvThread finished. Total size: %llu, Total recv: %lu, Avg: %llu", nSizeTotal, nTotalRecv, nTotalRecv > 0 ? nSizeTotal / nTotalRecv : 0 );
 
 	return 0;
 }
@@ -634,8 +654,36 @@ void *CBonTuner::RecvThread( void *pParam )
 void CBonTuner::waitForRecvThreadFinish(void)
 {
 	if( m_hRecvThread > 0 ) {
+#if 0
 		pthread_join(m_hRecvThread, NULL); // todo
 		m_hRecvThread = 0;
+#else	
+		/* 5000ms でジョインするか確認 */
+		if( timedJoin(m_hRecvThread, 5000) == false ) {
+			ERROR_OUTPUT1("RecvThread not finished. try force cancel");
+
+			conn->shutdownBoth();
+			m_pGrabTsData->set_Abort( true );
+
+			pthread_join(m_hRecvThread, NULL);
+
+			m_pGrabTsData->set_Abort( false );
+		}
+		m_hRecvThread = 0;
+#endif
+
 	}
 }
 
+static bool timedJoin(pthread_t th, int timeoutMs)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += timeoutMs / 1000;
+	ts.tv_nsec += (long)(timeoutMs % 1000) * 1000000L;
+	if( ts.tv_nsec >= 1000000000L ) {
+		ts.tv_sec++;
+		ts.tv_nsec -= 1000000000L;
+	}
+	return pthread_timedjoin_np(th, NULL, &ts) == 0;
+}

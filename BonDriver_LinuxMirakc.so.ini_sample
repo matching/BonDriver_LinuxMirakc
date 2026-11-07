@@ -16,3 +16,5 @@ PRIORITY=10
 ; Service Split(1=enable)
 SERVICE_SPLIT=0
 
+; BufferSize(Default 128M)
+; BUFFER_SIZE=134217728
