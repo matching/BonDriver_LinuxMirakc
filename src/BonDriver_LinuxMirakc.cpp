@@ -61,7 +61,7 @@ static int Init()
 	g_Priority = sec_global.Get("PRIORITY", 1 );
 	g_Service_Split = sec_global.Get("SERVICE_SPLIT", 0 );
 	g_BufferSize = sec_global.Get("BUFFER_SIZE", 1024 * 1024 * 128 );
-	g_BufferSize = std::max( g_BufferSize, 64 * 1024); // 最低でも64KBは確保する
+	g_BufferSize = std::max( g_BufferSize, (unsigned long)64 * 1024 ); // 最低でも64KBは確保する
 
 	strncpy( g_ServerSockpath, sec_global.Get("SERVER_SOCKPATH", "").c_str(), sizeof( g_ServerSockpath ) - 1 );
 	strncpy( g_ServerType, sec_global.Get("SERVER_TYPE", "http").c_str(), sizeof( g_ServerType ) - 1 );
@@ -76,6 +76,7 @@ static void Init_set_default_value(void)
 	g_DecodeB25 = 0;
 	g_Priority = 1;
 	g_Service_Split = 0;
+	g_BufferSize = 1024 * 1024 * 128; // 128MB
 
 	strcpy( g_ServerType, "http" );
 }
@@ -127,7 +128,7 @@ CBonTuner::CBonTuner()
 	m_hRecvThread = 0;
 
 	// GrabTsDataインスタンス作成
-	m_pGrabTsData = new GrabTsData();
+	m_pGrabTsData = new GrabTsData(g_BufferSize);
 
 }
 
@@ -617,7 +618,7 @@ void *CBonTuner::RecvThread( void *pParam )
 	/* バッファサイズ（リングバッファサイズ）より受信バッファを大きくできない（大きいとputで無限待ちになる）
 	 * そのため、受信バッファはリングバッファの1/10までか、128Kの小さいほうとする。(128Kあれば十分)
 	 */
-	int buf_size = std::min(g_BufferSize / 10, RECV_SIZE_MAX);
+	unsigned long buf_size = std::min(g_BufferSize / 10, (unsigned long)RECV_SIZE_MAX);
 	char *buf = new char[ buf_size ];
 
 	int ret;

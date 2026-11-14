@@ -46,9 +46,9 @@ BOOL GrabTsData::put_TsStream(BYTE *pSrc, DWORD dwSize)
 			}
 
 			// swSize が入るか確認
-			nTail = RING_BUF_SIZE - nPush; // size between the current position and the buffer end
-			nData = (RING_BUF_SIZE + nPush - nPull) % RING_BUF_SIZE; // size of TS data stored
-			nData = RING_BUF_SIZE - nData - 1; // size of available buffer (empty buffer - 1)
+			nTail = m_nBufSize - nPush; // size between the current position and the buffer end
+			nData = (m_nBufSize + nPush - nPull) % m_nBufSize; // size of TS data stored
+			nData = m_nBufSize - nData - 1; // size of available buffer (empty buffer - 1)
 			
 			if( nData >= dwSize ) {
 				break;
@@ -126,8 +126,8 @@ BOOL GrabTsData::get_TsStream(BYTE **ppDst, DWORD *pdwSize, DWORD *pdwRemain)
 #endif
 
 	// copy TS data to the destination buffer
-	DWORD nTail = RING_BUF_SIZE - nPull; // size between the current position and the buffer end
-	DWORD nData = (RING_BUF_SIZE + nPush - nPull) % RING_BUF_SIZE; // size of TS data stored
+	DWORD nTail = m_nBufSize - nPull; // size between the current position and the buffer end
+	DWORD nData = (m_nBufSize + nPush - nPull) % m_nBufSize; // size of TS data stored
 	DWORD nRemain = nData;
 	if (nData > 0) {
 		nData = std::min(nData, (DWORD)DATA_BUF_SIZE);
@@ -193,7 +193,7 @@ BOOL GrabTsData::get_ReadyCount(DWORD *pdwRemain)
 		}
 		::pthread_mutex_unlock( &m_pRingMutex );
 	
-		*pdwRemain = CEIL((RING_BUF_SIZE + nPush - nPull) % RING_BUF_SIZE, DATA_BUF_SIZE);
+		*pdwRemain = CEIL((m_nBufSize + nPush - nPull) % m_nBufSize, DATA_BUF_SIZE);
 	}
 
 	return TRUE;

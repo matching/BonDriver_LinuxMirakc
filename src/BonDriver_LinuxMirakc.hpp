@@ -26,7 +26,7 @@ static uint32_t g_ServerPort;
 static int g_DecodeB25;
 static int g_Priority;
 static int g_Service_Split;
-static int g_BufferSize;
+static unsigned long g_BufferSize;
 
 #define SPACE_NUM 8
 static char *g_pType[SPACE_NUM];
